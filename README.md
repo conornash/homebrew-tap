@@ -34,34 +34,58 @@ drifted from the file.
 The one-liner equivalent, if you need it:
 
 ```sh
-brew install --cask --no-quarantine --require-sha conornash/tap/conornash-love
+brew install --cask --require-sha conornash/tap/conornash-love
 ```
 
 The fully-qualified name tells Homebrew to tap this repository and to trust
 only that one cask, not the whole tap
 ([tap trust](https://docs.brew.sh/Tap-Trust), required since Homebrew 6.0).
 
-### Gatekeeper policy — read this
+### Gatekeeper — read this
 
-LÖVE's macOS binary is not signed with a Developer ID and is not notarised.
-Homebrew normally marks every cask download with the `com.apple.quarantine`
-attribute; on a Mac with Gatekeeper enabled, an unsigned quarantined app is
-refused with "Apple could not verify …" and there is no supported way past it
-on current macOS. **This tap therefore installs LÖVE with `--no-quarantine`.**
-That is a deliberate decision to run an unsigned upstream binary, recorded here
-so it is a policy rather than an accident:
+LÖVE's macOS binary is ad-hoc signed: no Developer ID, not notarised. Homebrew
+marks every cask download with the `com.apple.quarantine` attribute, and
+**there is no opt-out**: `--no-quarantine` was deprecated in Homebrew 4.7,
+disabled in 5.0 and deleted in 6.0 with no replacement
+([Homebrew/brew#20755](https://github.com/Homebrew/brew/issues/20755)). The
+same policy is why the official `love` cask was disabled. This tap does not try
+to get around that; the installed app is quarantined, exactly as Homebrew
+intends.
 
-- The download is verified against a pinned sha256 before it is unpacked
-  (`require_sha` in the Brewfile, `sha256` in the cask).
-- The pinned archive is the one published by the LÖVE maintainers on their
-  GitHub releases page, the same file every macOS LÖVE user has installed since
-  2023.
-- No package manager can fix this. The only Gatekeeper-clean alternative is
-  building LÖVE from source on each machine, which needs Xcode and about ten
-  native dependencies; it is not worth it for these machines.
+What that means on each kind of machine:
 
-If a future LÖVE release ships a notarised build, drop `no_quarantine` from the
-Brewfile and the CI install step, and delete this section.
+- **Gatekeeper off** (`spctl --status` → `assessments disabled`): the app runs
+  immediately. Kaji is in this state.
+- **Gatekeeper on** (the default; assume this for the boys' Macs): the first
+  `love …` or double-click is refused with "cannot be opened because the
+  developer cannot be verified" (macOS 12–14) or "Apple could not verify …"
+  (macOS 15+). Approve it **once** in the macOS security settings:
+  - macOS 12–13: System Preferences → Security & Privacy → General → *Open Anyway*
+  - macOS 14+: System Settings → Privacy & Security → scroll to *Security* → *Open Anyway*
+
+  then launch again and confirm. macOS records the approval in the quarantine
+  attribute; Homebrew 6 preserves it across `brew upgrade` where it can
+  (`Cask::Quarantine.inherit_user_approval!`). For an ad-hoc-signed app the
+  signing identity changes with every release, so expect to approve again after
+  each version bump. Record the outcome in the SUPPORT.md verification log.
+
+This procedure has **not yet been verified on macOS 12**; it is Apple's
+documented flow, but the first install on one of the boys' Macs is the test.
+
+Why not strip the attribute automatically (a `postflight` block running
+`xattr -d com.apple.quarantine`)? Because that is a re-implementation of the
+feature Homebrew removed deliberately, it would be flagged in any review of
+this tap, and it makes a security decision silently on someone else's machine.
+One approval click per machine per release is the honest cost of running an
+unsigned binary. If that cost turns out to be wrong for these machines, that
+change belongs in a reviewed commit to the cask, not in a flag.
+
+What the tap does guarantee: the download is verified against a pinned sha256
+before it is unpacked (`require_sha` in the Brewfile, `sha256` in the cask),
+and the archive is the one the LÖVE maintainers publish on GitHub — the same
+file every macOS LÖVE user has installed since 2023.
+
+If a future LÖVE release ships a notarised build, delete this section.
 
 ## Maintaining
 
@@ -92,9 +116,10 @@ each cask carries a `livecheck` block for this.
 - macOS 12 (no GitHub runner exists). See SUPPORT.md.
 - Intel Macs (the runner is arm64). Covered only by the universal-binary check
   in SUPPORT.md.
-- That `--no-quarantine` was used. `brew bundle` honours the Brewfile's `args`;
-  a hand-typed `brew install` without the flag will install an app that will
-  not launch on a Gatekeeper-on machine.
+- That the app launches on a Gatekeeper-on machine. Whether the runner can
+  even execute the quarantined binary depends on the runner image's Gatekeeper
+  state, which the workflow prints (`spctl --status`) before the smoke test.
+  The one-time approval flow above is only exercised by hand.
 
 ## Layout
 

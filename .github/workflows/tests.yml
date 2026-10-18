@@ -68,7 +68,15 @@ jobs:
 
       - name: Install the way the Brewfile does
         run: |
-          brew install --cask --no-quarantine --require-sha conornash/tap/conornash-love
+          brew install --cask --require-sha conornash/tap/conornash-love
+
+      - name: Record Gatekeeper state on the runner
+        # Diagnostics only. Homebrew 6 quarantines every cask download and has no
+        # opt-out; whether the smoke test below can execute the binary depends on
+        # whether the runner image has Gatekeeper assessments enabled.
+        run: |
+          spctl --status || true
+          xattr -p com.apple.quarantine /Applications/love.app || echo 'not quarantined'
 
       - name: Smoke test
         run: |

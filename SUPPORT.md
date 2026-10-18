@@ -7,7 +7,7 @@ floor above the oldest row here without updating this file first.
 
 | Machine        | Owner | macOS            | CPU            | Homebrew prefix   | Notes                                  |
 |----------------|-------|------------------|----------------|-------------------|----------------------------------------|
-| Kaji           | Conor | 26.6.2 (Tahoe)   | arm64          | /opt/homebrew     | Tap is authored and tested here        |
+| Kaji           | Conor | 26.6.2 (Tahoe)   | arm64          | /opt/homebrew     | Tap is authored and tested here. Gatekeeper **off** (`spctl --status` → assessments disabled), so a passing launch here says nothing about Gatekeeper-on machines |
 | TODO: hostname | twin  | 12.x (Monterey)  | TODO: arm64/x86_64 | TODO           | Gatekeeper on (assumed) — see README   |
 | TODO: hostname | twin  | 12.x (Monterey)  | TODO: arm64/x86_64 | TODO           | Gatekeeper on (assumed) — see README   |
 
@@ -62,7 +62,12 @@ above, not by an Intel runner.
 
 Manual checks on machines CI cannot reach. Newest first.
 
-| Date       | Machine        | macOS | Cask               | Result | Notes                       |
-|------------|----------------|-------|--------------------|--------|-----------------------------|
-| TODO       | TODO (twin 1)  | 12.x  | conornash-love 11.5 | TODO   | `brew bundle install`, then `love --version` |
-| TODO       | TODO (twin 2)  | 12.x  | conornash-love 11.5 | TODO   |                             |
+For a Gatekeeper-on machine, "Result" must cover both halves: did `brew bundle
+install` succeed, and did the one-time *Open Anyway* approval (README,
+"Gatekeeper") let `love --version` run afterwards.
+
+| Date       | Machine        | macOS  | Cask                | Install | Gatekeeper approval | Notes                                   |
+|------------|----------------|--------|---------------------|---------|---------------------|-----------------------------------------|
+| 2026-10-18 | Kaji           | 26.6.2 | conornash-love 11.5 | OK      | n/a (Gatekeeper off) | `brew install --cask --require-sha`; `love --version` → `LOVE 11.5 (Mysterious Mysteries)`; app confirmed quarantined (`xattr -p`) |
+| TODO       | TODO (twin 1)  | 12.x   | conornash-love 11.5 | TODO    | TODO                | `brew bundle install`, launch, approve once, `love --version` |
+| TODO       | TODO (twin 2)  | 12.x   | conornash-love 11.5 | TODO    | TODO                |                                         |
