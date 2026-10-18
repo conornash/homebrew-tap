@@ -72,11 +72,21 @@ jobs:
 
       - name: Record Gatekeeper state on the runner
         # Diagnostics only. Homebrew 6 quarantines every cask download and has no
-        # opt-out; whether the smoke test below can execute the binary depends on
-        # whether the runner image has Gatekeeper assessments enabled.
+        # opt-out. The attribute is expected to be present here.
         run: |
           spctl --status || true
-          xattr -p com.apple.quarantine /Applications/love.app || echo 'not quarantined'
+          xattr -p com.apple.quarantine /Applications/love.app
+
+      - name: Show the caveats a user would see
+        run: |
+          brew info --cask conornash/tap/conornash-love
+
+      - name: Follow the caveats
+        # The cask never strips quarantine itself; it prints this command for the
+        # user to run. CI runs it exactly as printed so the smoke test does not
+        # depend on the runner image's Gatekeeper state.
+        run: |
+          xattr -dr com.apple.quarantine /Applications/love.app
 
       - name: Smoke test
         run: |

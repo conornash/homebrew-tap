@@ -49,8 +49,10 @@ marks every cask download with the `com.apple.quarantine` attribute, and
 disabled in 5.0 and deleted in 6.0 with no replacement
 ([Homebrew/brew#20755](https://github.com/Homebrew/brew/issues/20755)). The
 same policy is why the official `love` cask was disabled. This tap does not try
-to get around that; the installed app is quarantined, exactly as Homebrew
-intends.
+to get around that: the installed app is quarantined, exactly as Homebrew
+intends, and the cask's `caveats` (printed at the end of `brew install`, and
+by `brew info --cask conornash/tap/conornash-love`) tell the person at the
+keyboard what to do next.
 
 What that means on each kind of machine:
 
@@ -67,18 +69,24 @@ What that means on each kind of machine:
   attribute; Homebrew 6 preserves it across `brew upgrade` where it can
   (`Cask::Quarantine.inherit_user_approval!`). For an ad-hoc-signed app the
   signing identity changes with every release, so expect to approve again after
-  each version bump. Record the outcome in the SUPPORT.md verification log.
+  each version bump.
+
+  **Or** remove the attribute by hand, which is what the caveats print:
+
+  ```sh
+  xattr -dr com.apple.quarantine /Applications/love.app
+  ```
+
+  Either way, record the outcome in the SUPPORT.md verification log.
 
 This procedure has **not yet been verified on macOS 12**; it is Apple's
 documented flow, but the first install on one of the boys' Macs is the test.
 
-Why not strip the attribute automatically (a `postflight` block running
-`xattr -d com.apple.quarantine`)? Because that is a re-implementation of the
-feature Homebrew removed deliberately, it would be flagged in any review of
-this tap, and it makes a security decision silently on someone else's machine.
-One approval click per machine per release is the honest cost of running an
-unsigned binary. If that cost turns out to be wrong for these machines, that
-change belongs in a reviewed commit to the cask, not in a flag.
+The cask deliberately does **not** run that `xattr` command itself (no
+`postflight`). Doing so would re-implement the feature Homebrew removed on
+purpose and would make a security decision silently on someone else's machine.
+Printing the command and letting a person run it keeps the decision with the
+person. If that ever changes, it should be a reviewed commit to the cask.
 
 What the tap does guarantee: the download is verified against a pinned sha256
 before it is unpacked (`require_sha` in the Brewfile, `sha256` in the cask),
@@ -116,10 +124,11 @@ each cask carries a `livecheck` block for this.
 - macOS 12 (no GitHub runner exists). See SUPPORT.md.
 - Intel Macs (the runner is arm64). Covered only by the universal-binary check
   in SUPPORT.md.
-- That the app launches on a Gatekeeper-on machine. Whether the runner can
-  even execute the quarantined binary depends on the runner image's Gatekeeper
-  state, which the workflow prints (`spctl --status`) before the smoke test.
-  The one-time approval flow above is only exercised by hand.
+- That the app launches on a Gatekeeper-on machine without the step in the
+  caveats. CI follows the caveats literally (runs the `xattr` command, then
+  `love --version`), which makes the smoke test deterministic whatever the
+  runner image's Gatekeeper state (printed via `spctl --status` for the
+  record). The *Open Anyway* route is only exercised by hand.
 
 ## Layout
 
