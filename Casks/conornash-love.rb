@@ -21,7 +21,8 @@ cask "conornash-love" do
     strategy :github_latest
   end
 
-  depends_on macos: ">= :monterey"
+  # A bare symbol means "this version or newer".
+  depends_on macos: :monterey
 
   app "love.app"
   binary "#{appdir}/love.app/Contents/MacOS/love"

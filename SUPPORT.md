@@ -12,7 +12,8 @@ floor above the oldest row here without updating this file first.
 | TODO: hostname | twin  | 12.x (Monterey)  | TODO: arm64/x86_64 | TODO           | Gatekeeper on (assumed) — see README   |
 
 Oldest macOS in the table: **12 (Monterey)**. Every cask carries
-`depends_on macos: ">= :monterey"` to make that floor explicit and to make
+`depends_on macos: :monterey` (a bare symbol means "this version or newer";
+the `">= :monterey"` string form is deprecated) to make that floor explicit and to make
 `brew audit` enforce it.
 
 ## What "supported" means for each macOS version
@@ -42,7 +43,7 @@ Homebrew 6.x). Exercised by CI on every push (GitHub `macos-26` runner, arm64).
   2024. Monterey support is verified by hand on the machines above; record the
   date and result of the last check in the Verification log below.
 - `:monterey` is still an active symbol in Homebrew's `MacOSVersion::SYMBOLS`,
-  so `depends_on macos: ">= :monterey"` parses. If Homebrew ever retires the
+  so `depends_on macos: :monterey` parses. If Homebrew ever retires the
   symbol, `brew audit` will fail in CI and the floor must be revisited.
 
 ## Architecture
