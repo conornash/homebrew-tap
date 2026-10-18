@@ -1,0 +1,80 @@
+# Derived from Homebrew's `brew tap-new` template (.github/workflows/tap-new-tests.yml
+# in Homebrew/brew), trimmed for a cask-only tap:
+#   - no Linux job (casks are macOS-only)
+#   - no bottle build/upload (bottles are a formula concept)
+#   - an explicit cask install + smoke-test job instead
+#
+# What CI can and cannot prove is recorded in SUPPORT.md. In particular there is
+# no macOS 12 runner on GitHub, so Monterey is verified by hand.
+name: brew test-bot
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash -xeuo pipefail {0}
+
+jobs:
+  tap-syntax:
+    runs-on: macos-26
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        # Checks this repository out as the tap and runs `brew trust` on it.
+        uses: Homebrew/actions/setup-homebrew@eb02c69dbabdb66ff183c614f4ce7ab3c077592c # 2026.10.12.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache Homebrew Bundler RubyGems
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.set-up-homebrew.outputs.gems-path }}
+          key: macos-26-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
+          restore-keys: macos-26-rubygems-
+
+      - run: brew test-bot --only-cleanup-before
+
+      - run: brew test-bot --only-setup
+
+      # readall + audit + style for every cask in the tap.
+      - run: brew test-bot --only-tap-syntax
+
+  install-casks:
+    needs: tap-syntax
+    runs-on: macos-26
+    permissions:
+      contents: read
+    steps:
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@eb02c69dbabdb66ff183c614f4ce7ab3c077592c # 2026.10.12.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Audit casks against the live download
+        run: |
+          brew audit --cask --online --strict conornash/tap/conornash-love
+
+      - name: Install the way the Brewfile does
+        run: |
+          brew install --cask --no-quarantine --require-sha conornash/tap/conornash-love
+
+      - name: Smoke test
+        run: |
+          # `love --version` prints the version and exits without opening a window.
+          love --version | tee /dev/stderr | grep -F 'LOVE 11.5'
+
+      - name: Uninstall cleanly
+        run: |
+          brew uninstall --cask --zap conornash/tap/conornash-love
